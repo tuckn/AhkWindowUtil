@@ -1,5 +1,5 @@
 ﻿/**
- * @Updated 2019/06/09
+ * @Updated 2019/06/13
  * @Fileoverview Desktop manager for AutoHotkey
  * @License MIT
  * @Fileencodeing UTF-8[dos]
@@ -7,7 +7,7 @@
  * @Installation
  *   Use #Include %A_ScriptDir%\AhkDesktopManager\Desktop.ahk or copy into your code
  * @Links Tuckn https://github.com/tuckn/AhkDesktopManager
- * @Email tuckn333 <at> gmail <dot> com
+ * @Email tuckn333@gmail.com
  */
 
 Global EXIT_CODE_OK := 0
@@ -192,6 +192,10 @@ class Desktop
   /**
    * @Method FindWindowHwnds
    * @Description Find window Hwnd which is matched args {{{
+   * @Syntax winHwnds := Desktop.FindWindowHwnds(...)
+   * @Param {String} WinTitle
+   * @Param {String} [winText=""]
+   * @Param {String} [excludeTitle=""]
    * @Return {Array} [{ hwnd, title }]
    */
   class FindWindowHwnds extends Desktop.Functor
@@ -267,6 +271,28 @@ class Desktop
       DetectHiddenWindows, Off
 
       Return rtn
+    }
+  } ; }}}
+
+  /**
+   * @Method MinimizeWindow
+   * @Description Collapse the specified window into the task bar. {{{
+   * @Syntax Desktop.MinimizeWindow(...)
+   * @Param {String} WinTitle
+   * @Param {String} [winText=""]
+   * @Param {String} [excludeTitle=""]
+   * @Return
+   */
+  class MinimizeWindow extends Desktop.Functor
+  {
+    Call(self, winTitle, winTxt="", excludeTitle="")
+    {
+      WinMinimize, %winTitle%, %winText%, %excludeTitle%
+
+      ; If a particular type of window does not respond correctly to WinMinimize,
+      ; try using the following instead: 0x112=WM_SYSCOMMAND 0xF020=SC_MINIMIZE
+      PostMessage, 0x112, 0xF020, , , %winTitle%, %winText%
+      Return
     }
   } ; }}}
 
@@ -422,6 +448,15 @@ class Desktop
         Return False
       }
 
+     /**
+       * @Function WinGet
+       Retrieves the specified window's unique ID, process ID, process name, or
+       a list of its controls. It can also retrieve a list of
+       all windows matching the specified criteria.
+       WinGet, OutputVar , Cmd, WinTitle, WinText, ExcludeTitle, ExcludeText
+      * @Param {Cmd} ID, IDLast, PID, ProcessName, ProcessPath, Count, ...
+      * @Link https://autohotkey.com/docs/commands/WinGet.htm
+      */
       WinGet, winHwnd, ID, %winTitle%, , %excludeTitle%
 
       SetTitleMatchMode, %tmpMatchMode%
