@@ -4,17 +4,12 @@
  * @License MIT
  * @Fileencodeing UTF-8[dos]
  * @Requirements AutoHotkey (v1.0.46+ or v2.0-a+)
+ *  https://github.com/tuckn/AhkConstValues
  * @Installation
  *   Use #Include %A_ScriptDir%\AhkDesktopManager\Desktop.ahk or copy into your code
  * @Links Tuckn https://github.com/tuckn/AhkDesktopManager
  * @Email tuckn333@gmail.com
  */
-
-Global EXIT_CODE_OK := 0
-Global EXIT_CODE_ERR := 1
-Global WM_NCHITTEST := 0x84
-Global G_MsgIconStop := 0x10
-Global G_SendMessageFAIL = 0xFFFFFFFF ; 32と64で異なる？64は-1？
 
 /**
  * @Class Desktop
@@ -117,7 +112,7 @@ class Desktop
       WinGet, ctrlHwnds, ControlListHWND, ahk_id %winHwnd%
 
       ; ; debug
-      ; Msgbox, Cursor window Infomation`nX: %cursorX%`nY: %cursorY%`nWinHWND: %winHwnd%`nWinName: %processName%`nWinTitle: %winTitle%`nClassName: %winClass%`nControlHWND: %ctrlHwnd%`nControlClassNN: %ctrlClass%`nControlText: %ctrlText%
+      ; MsgBox, Cursor window Infomation`nX: %cursorX%`nY: %cursorY%`nWinHWND: %winHwnd%`nWinName: %processName%`nWinTitle: %winTitle%`nClassName: %winClass%`nControlHWND: %ctrlHwnd%`nControlClassNN: %ctrlClass%`nControlText: %ctrlText%
 
       ; Cursor
       winInfo.cursorX := cursorX
@@ -171,7 +166,7 @@ class Desktop
             Break
           }
         }
-        IfEqual, exitCode, %EXIT_CODE_OK%, Break
+        IfEqual, exitCode, %G_ExitCodeOK%, Break
 
         ; Retry with regular expression matching(Slow)
         Loop, Parse, controls, `n
@@ -182,7 +177,7 @@ class Desktop
             Break
           }
         }
-        IfEqual, exitCode, %EXIT_CODE_OK%, Break
+        IfEqual, exitCode, %G_ExitCodeOK%, Break
       }
 
       Return ctrlHwnd
@@ -219,7 +214,7 @@ class Desktop
         ; titles .= "ahk_id " . this_id . ": [" . thisTitle . "]`n"; Debug
       }
 
-      ; Msgbox, %titles% ; Debug
+      ; MsgBox, %titles% ; Debug
       DetectHiddenWindows, %tmpDetectHid%
       Return info
     }
@@ -261,7 +256,7 @@ class Desktop
         ; Tray_GetInfo(A_Index, winHwnd, uid, msg, icon)
         WinGet, pn, ProcessName, ahk_id %winHwnd%
 
-        Msgbox, %msg% - %uid% - %winHwnd%
+        MsgBox, %msg% - %uid% - %winHwnd%
         if (pn = processName) {
           PostMessage, %msg%, %uid%, 0x203, , ahk_id %winHwnd%
           rtn := winHwnd
