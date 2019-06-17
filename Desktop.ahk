@@ -1,14 +1,15 @@
 ﻿/**
- * @Updated 2019/06/13
+ * @Updated 2019/06/16
  * @Fileoverview Desktop manager for AutoHotkey
- * @License MIT
  * @Fileencodeing UTF-8[dos]
  * @Requirements AutoHotkey (v1.0.46+ or v2.0-a+)
  *  https://github.com/tuckn/AhkConstValues
  * @Installation
  *   Use #Include %A_ScriptDir%\AhkDesktopManager\Desktop.ahk or copy into your code
- * @Links Tuckn https://github.com/tuckn/AhkDesktopManager
- * @Email tuckn333@gmail.com
+ * @License MIT
+ * @Links https://github.com/tuckn/AhkDesktopManager
+ * @Author Tuckn
+ * @Email tuckn333+github@gmail.com
  */
 
 /**
@@ -22,6 +23,35 @@
  */
 class Desktop
 {
+  /**
+   * @Method GetWinHwnds
+   * @Description Get window handles. {{{
+   * @Syntax winHwnd := Desktop.GetWinHwnds(...)
+   * @Param {String} WinTitle
+   * @Param {String} [winText=""]
+   * @Param {String} [excludeTitle=""]
+   * @Return {Array}
+   */
+  class GetWinHwnds extends Desktop.Functor
+  {
+    Call(self, winTitle, winText:="", excludeTitle:="", detect:="")
+    {
+      IfNotEqual, detect, , DetectHiddenWindows, On
+
+      ; Get a list of ahk_id(= window handle ID).
+      WinGet, idsList, List, %winTitle%, %winText%, %excludeTitle%
+
+      winHwnds := []
+      Loop, %idsList%
+      {
+        winHwnds.Insert(idsList%A_Index%)
+      }
+
+      DetectHiddenWindows, Off
+      Return winHwnds
+    }
+  } ; }}}
+
   /**
    * @Method GetActiveWindowInfo
    * @Description Get a active window information {{{
@@ -395,6 +425,66 @@ class Desktop
     {
       Desktop.MoveCursorToCaret()
       Send, {LButton 2}
+      Return
+    }
+  } ; }}}
+
+  /**
+   * @Method SendMessageToWindow
+   * @Description Send the specified string to the specified window {{{
+   *   The reply is 1 if the target window processed the message,
+   *   or 0 if it ignored it.
+   * @Link https://www.autohotkey.com/docs/commands/PostMessage.htm
+   */
+  class SendMessageToWindow extends Desktop.Functor
+  {
+    Call(self, wmMsg, wParam, lParam, ctrl, winTitle, winText:="", excludeTitle:="", detect:="")
+    {
+      IfNotEqual, detect, , DetectHiddenWindows, On
+
+      Msgbox, %ctrl% %winTitle%
+      ; SendMessage
+      ; SendMessage, Msg [, wParam, lParam, Control, WinTitle, ...., Timeout]
+      ; WM_COPYDATA is WM_COPYDATA. Must use SendMessage. not working(?) PostMessage.
+      SendMessage, %wmMsg%, %wParam%, %lParam%, %ctrl%, %winTitle%, %winText%, %excludeTitle%
+
+      DetectHiddenWindows, Off
+      Return
+    }
+  } ; }}}
+
+  /**
+   * @Method SendStrToWindow
+   * @Description Send the specified string to the specified window {{{
+   *   The reply is 1 if the target window processed the message,
+   *   or 0 if it ignored it.
+   * @Link https://www.autohotkey.com/docs/commands/OnMessage.htm
+   */
+  class SendStrToWindow extends Desktop.Functor
+  {
+    Call(self, strToSend, ctrl, winTitle, winText:="", excludeTitle:="", detect:="")
+    {
+      ; Set up the structure's memory area.
+      VarSetCapacity(CopyDataStruct, 3*A_PtrSize, 0)
+
+      ; First set the structure's cbData member to the size of the string,
+      ; including its zero terminator:
+      SizeInBytes := (StrLen(strToSend) + 1) * (A_IsUnicode ? 2 : 1)
+
+      ; OS requires that this be done.
+      NumPut(SizeInBytes, CopyDataStruct, A_PtrSize)
+
+      ; Set lpData to point to the string itself.
+      NumPut(&strToSend, CopyDataStruct, 2*A_PtrSize)
+ControlGetFocus, ctrl, A
+Msgbox, %ctrl%
+; winInfo := Desktop.GetActiveWindowInfo()
+; winTitle := winInfo.title
+; Msgbox, %winTitle%
+
+SendMessage,% WM_SETTEXT, 0, &strToSend,% ctrl,% winTitle
+      ; Desktop.SendMessageToWindow(WM_COPYDATA, 0, &CopyDataStruct, ctrl, winTitle, winText, excludeTitle)
+
       Return
     }
   } ; }}}

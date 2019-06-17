@@ -13,6 +13,25 @@ MsgBox,% G_MsgIconInfo, Hot Keys,% "[Ctrl] + [Shift] + 5: Get the active window 
   . "`n"
   . "Exit to manage the trask tray"
 
+^+3::
+  winTitle := "ahk_exe sakura.exe"
+  winHwnds := Desktop.GetWinHwnds(winTitle)
+  winHwndsText := GetStringFromObject(winHwnds)
+  MsgBox,% G_MsgIconInfo,% "Example Class Desktop",% winTitle ":`n"winHwndsText
+
+  ExitApp
+
+^+4::
+  strToSend := "This message from AutoHotkey"
+
+  ctrl := Desktop.GetControlHwnd()
+  ; ctrl := "Edit1"
+  winTitle := "ahk_exe notepad.exe"
+
+  Desktop.SendStrToWindow(strToSend, ctrl, winTitle)
+
+  ExitApp
+
 ^+5::
   MsgBox,% G_MsgIconInfo, PREPARE, Activate your window and click [OK]
   Sleep, 3000
