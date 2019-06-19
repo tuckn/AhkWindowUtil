@@ -138,6 +138,7 @@ class Desktop
       WinGet, processName, ProcessName, ahk_id %winHwnd%
       WinGetTitle, winTitle, ahk_id %winHwnd%
       WinGetClass, winClass, ahk_id %winHwnd%
+      WinGetPos, winX, winY, width, height, ahk_id %winHwnd%
       ControlGetText, ctrlText, , ahk_id %ctrlHwnd%
       WinGet, ctrlHwnds, ControlListHWND, ahk_id %winHwnd%
 
@@ -152,6 +153,10 @@ class Desktop
       winInfo.processName := processName
       winInfo.title := winTitle
       winInfo.winClass := winClass
+      winInfo.winX := winX
+      winInfo.winY := winY
+      winInfo.width := width
+      winInfo.height := winY
       ; Control
       winInfo.ctrlClass := ctrlClass
       winInfo.ctrlText := ctrlText
