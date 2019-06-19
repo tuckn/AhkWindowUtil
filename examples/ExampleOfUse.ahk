@@ -43,8 +43,8 @@ MsgBox,% G_MsgIconInfo, Hot Keys,% "[Ctrl] + [Shift] + 5: Get the active window 
 ^+6::
   MsgBox,% G_MsgIconInfo, PREPARE, Hover on your window after clicked [OK]
   Sleep, 3000
-  winInfo := Desktop.GetWindowInfoUnderCursor()
-  infoText := GetStringFromObject(winInfo)
+  curInfo := Desktop.GetWindowInfoUnderCursor()
+  infoText := GetStringFromObject(curInfo)
   MsgBox,% G_MsgIconInfo, The window info under the cusor, %infoText%
   Return
 

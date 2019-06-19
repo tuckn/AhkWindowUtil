@@ -101,8 +101,8 @@ class Desktop
    * @Method GetWindowInfoUnderCursor
    * @Description Get window information under the cursor {{{
    * @Return {Associative Array}
-   *   .cursorX:
-   *   .cursorY:
+   *   .curRelX:
+   *   .curRelY:
    *   .hwnd: ex "0x20ace"
    *   .processName: ex "excel.exe"
    *   .title: ex "Microsoft Visual Basic for Application..."
@@ -115,14 +115,19 @@ class Desktop
   {
     Call(self)
     {
-      winInfo := {}
+      savedCoordModeMouse := A_CoordModeMouse
+      CoordMode, Mouse, Relative
+
       ; Get the Window HWND and Control HWND
       ; MouseGetPos https://www.autohotkey.com/docs/commands/MouseGetPos.htm
-      MouseGetPos, cursorX, cursorY, winHwnd, ctrlHwnd, 3 ; Flag=3
+      MouseGetPos, curRelX, curRelY, winHwnd, ctrlHwnd, 3 ; Flag=3
+
+      CoordMode, Mouse, Screen
+      MouseGetPos, curAbsX, curAbsY, , ,3
 
       ; Test the Control HWND ID
       ; ControlにWM_NCHITTESTメッセージを送る wParam:なし、lParam:マウス座標
-      lParam := (cursorY << 16) | cursorX
+      lParam := (curAbsY << 16) | curAbsX
       SendMessage, %WM_NCHITTEST%, 0, %lParam%, , ahk_id %ctrlHwnd%
 
       ; 応答を待ちエラーならば,Controlの取得方法を変更してControlHWNDを再格納
@@ -138,32 +143,37 @@ class Desktop
       WinGet, processName, ProcessName, ahk_id %winHwnd%
       WinGetTitle, winTitle, ahk_id %winHwnd%
       WinGetClass, winClass, ahk_id %winHwnd%
-      WinGetPos, winX, winY, width, height, ahk_id %winHwnd%
+      WinGetPos, winX, winY, winWidth, winHeight, ahk_id %winHwnd%
       ControlGetText, ctrlText, , ahk_id %ctrlHwnd%
       WinGet, ctrlHwnds, ControlListHWND, ahk_id %winHwnd%
 
       ; ; debug
-      ; MsgBox, Cursor window Infomation`nX: %cursorX%`nY: %cursorY%`nWinHWND: %winHwnd%`nWinName: %processName%`nWinTitle: %winTitle%`nClassName: %winClass%`nControlHWND: %ctrlHwnd%`nControlClassNN: %ctrlClass%`nControlText: %ctrlText%
+      ; MsgBox, Cursor window Infomation`nX: %curRelX%`nY: %curRelY%`nWinHWND: %winHwnd%`nWinName: %processName%`nWinTitle: %winTitle%`nClassName: %winClass%`nControlHWND: %ctrlHwnd%`nControlClassNN: %ctrlClass%`nControlText: %ctrlText%
+
 
       ; Cursor
-      winInfo.cursorX := cursorX
-      winInfo.cursorY := cursorY
+      curInfo := {}
+      curInfo.curAbsX := curAbsX
+      curInfo.curAbsY := curAbsY
+      curInfo.curRelX := curRelX
+      curInfo.curRelY := curRelY
       ; Window
-      winInfo.hwnd := winHwnd
-      winInfo.processName := processName
-      winInfo.title := winTitle
-      winInfo.winClass := winClass
-      winInfo.winX := winX
-      winInfo.winY := winY
-      winInfo.width := width
-      winInfo.height := winY
+      curInfo.winHwnd := winHwnd
+      curInfo.processName := processName
+      curInfo.winTitle := winTitle
+      curInfo.winClass := winClass
+      curInfo.winX := winX
+      curInfo.winY := winY
+      curInfo.winWidth := winWidth
+      curInfo.winHeight := winHeight
       ; Control
-      winInfo.ctrlClass := ctrlClass
-      winInfo.ctrlText := ctrlText
-      winInfo.ctrlHwnds := ctrlHwnds
-      winInfo.ctrlHwnd := ctrlHwnd
+      curInfo.ctrlClass := ctrlClass
+      curInfo.ctrlText := ctrlText
+      curInfo.ctrlHwnds := ctrlHwnds
+      curInfo.ctrlHwnd := ctrlHwnd
 
-      Return winInfo
+      CoordMode, Mouse, %savedCoordModeMouse%
+      Return curInfo
     }
   } ; }}}
 
@@ -335,7 +345,9 @@ class Desktop
   {
     Call(self, downKey)
     {
+      savedCoordModeMouse := A_CoordModeMouse
       CoordMode, Mouse, Screen
+
       MouseGetPos, startX, startY, winHwnd, winClass,
       WinGetPos, winX, winY, winW, winH, ahk_id %winHwnd%
       WinActivate, ahk_id %winHwnd%
@@ -349,7 +361,7 @@ class Desktop
         Sleep, 20
       }
 
-      CoordMode, Mouse, Relative
+      CoordMode, Mouse, %savedCoordModeMouse%
       Return
     }
   } ; }}}
@@ -363,6 +375,8 @@ class Desktop
   {
     Call(self, downKey)
     {
+      savedCoordModeMouse := A_CoordModeMouse
+
       CoordMode, Mouse, Screen
       MouseGetPos, startX, startY, winHwnd, winClass,
       WinGetPos, winX, winY, winW, winH, ahk_id %winHwnd%
@@ -385,7 +399,7 @@ class Desktop
         Sleep, 20
       }
 
-      CoordMode, Mouse, Relative
+      CoordMode, Mouse, %savedCoordModeMouse%
       Return
     }
   } ; }}}
