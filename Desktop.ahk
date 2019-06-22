@@ -1,5 +1,5 @@
 ﻿/**
- * @Updated 2019/06/16
+ * @Updated 2019/06/22
  * @Fileoverview Desktop manager for AutoHotkey
  * @Fileencodeing UTF-8[dos]
  * @Requirements AutoHotkey (v1.0.46+ or v2.0-a+)
@@ -23,23 +23,50 @@
  */
 class Desktop
 {
+  ; ============== HANDLE GETTER
   /**
-   * @Method GetWinHwnds
+   * @Method GetProcessID
+   * @Description Get the process ID {{{
+   * @Syntax pId := Desktop.GetProcessID(ProcessName)
+   * @Param {String} ProcessName
+   * @Return {String} 0: failed to get
+   */
+  class GetProcessID extends Desktop.Functor
+  {
+    Call(self, ProcessName)
+    {
+      ; Checks whether the specified process is present.
+      Process, Exist, %ProcessName%
+      ; Sets ErrorLevel to the Process ID (PID) if a matching process exists
+      pId :=  ErrorLevel
+      Return pId
+    }
+  } ; }}}
+
+  /**
+   * @Method GetWindowHwnds
    * @Description Get window handles. {{{
-   * @Syntax winHwnd := Desktop.GetWinHwnds(...)
+   * @Syntax winHwnd := Desktop.GetWindowHwnds(...)
    * @Param {String} WinTitle
    * @Param {String} [winText=""]
    * @Param {String} [excludeTitle=""]
+   * @Param {String} [detectsHid="OFF"]
    * @Return {Array}
    */
-  class GetWinHwnds extends Desktop.Functor
+  class GetWindowHwnds extends Desktop.Functor
   {
-    Call(self, winTitle, winText:="", excludeTitle:="", detect:="")
+    Call(self, winTitle:="", winText:="", excludeTitle:="", detectsHid:="OFF")
     {
-      IfNotEqual, detect, , DetectHiddenWindows, On
+      savedDetectHidWin := A_DetectHiddenWindows
+
+      if (detectsHid = "OFF" || detectsHid = "") {
+        DetectHiddenWindows, Off
+      } else {
+        DetectHiddenWindows, On
+      }
 
       ; Get a list of ahk_id(= window handle ID).
-      WinGet, idsList, List, %winTitle%, %winText%, %excludeTitle%
+      WinGet, idsList, List,% winTitle,% winText,% excludeTitle
 
       winHwnds := []
       Loop, %idsList%
@@ -47,8 +74,85 @@ class Desktop
         winHwnds.Insert(idsList%A_Index%)
       }
 
-      DetectHiddenWindows, Off
+      DetectHiddenWindows, %savedDetectHidWin%
       Return winHwnds
+    }
+  } ; }}}
+
+  /**
+   * @Method GetControlHwnd
+   * @Description Get the control handle from the control name, window title. {{{
+   * @Syntax winHwnd := Desktop.GetControlHwnd(...)
+   * @Param {String} ctrlName
+   * @Param {String} WinTitle
+   * @Param {String} [winText=""]
+   * @Param {String} [excludeTitle=""]
+   * @Return {String}
+   */
+  class GetControlHwnd extends Desktop.Functor
+  {
+    Call(self, ctrlName, winTitle, winText="", excludeTitle="")
+    {
+      ctrlHwnd := 0x0
+      exitCode := ErrorLevel
+
+      ; Get a list of ahk_id(= window handle ID).
+      WinGet, winIDs, List, %winTitle%, %winText%, %excludeTitle%
+      Loop, %winIDs%
+      {
+        ; Get a ahk_id
+        StringTrimRight, this_id, winIDs%A_Index%, 0
+
+        ; Get a control IDs
+        WinGet, controls, ControlList, ahk_id %this_id%
+        Loop, Parse, controls, `n
+        {
+          if (InStr(A_LoopField, ctrlName) != 0) {
+            ControlGet, ctrlHwnd, Hwnd,, %A_LoopField%, ahk_id %this_id%
+            exitCode := ErrorLevel
+            Break
+          }
+        }
+        IfEqual, exitCode, %G_ExitCodeOK%, Break
+
+        ; Retry with regular expression matching(Slow)
+        Loop, Parse, controls, `n
+        {
+          if (RegExMatch(A_LoopField, ctrlName) != 0) {
+            ControlGet, ctrlHwnd, Hwnd,, %A_LoopField%, ahk_id %this_id%
+            exitCode := ErrorLevel
+            Break
+          }
+        }
+        IfEqual, exitCode, %G_ExitCodeOK%, Break
+      }
+
+      Return ctrlHwnd
+    }
+  } ; }}}
+
+  /**
+   * @Method GetWindowInfo
+   * @Description Find window Hwnd which is matched args {{{
+   * @Syntax winInfo := Desktop.GetWindowInfo(...)
+   * @Param See @Method GetWindowHwnds
+   * @Return {Array} [{ hwnd, title }]
+   */
+  class GetWindowInfo extends Desktop.Functor
+  {
+    Call(self, winTitle:="", winText:="", excludeTitle:="", detectsHid:="OFF")
+    {
+
+      winHwnds := Desktop.GetWindowHwnds(winTitle, winText, excludeTitle, detectsHid)
+      winInfo := []
+
+      For key, winHwnd in winHwnds
+      {
+        WinGetTitle, winTitle, ahk_id %winHwnd%
+        winInfo.Insert({ hwnd: winHwnd, title: winTitle })
+      }
+
+      Return winInfo
     }
   } ; }}}
 
@@ -61,24 +165,18 @@ class Desktop
   {
     Call(self)
     {
-      winInfo := {}
+      savedCoordModeMouse := A_CoordModeMouse
+      CoordMode, Mouse, Screen
 
+      winInfo := {}
       WinGet, winHwnd, ID, A ; Get a window HWND
       WinGet, processName, ProcessName, ahk_id %winHwnd%
       WinGetTitle, winTitle, ahk_id %winHwnd%
       WinGetClass, winClass, ahk_id %winHwnd%
+      WinGetPos, winX, winY, winWidth, winHeight, ahk_id %winHwnd%
       ControlGetFocus, ctrlClass, ahk_id %winHwnd%
       ControlGetText, ctrlText, , ahk_id %winHwnd%
       WinGet, ctrlHwnds, ControlListHWND, A
-      ; ; 重そうだし、取得しても使用しない可能性が高いのでスキップ
-      ; ; 取得したControl IDの最初だけ格納する
-      ; Loop, Parse, ctrlHwnds, `n, `r
-      ; {
-      ;   ctrlName := A_LoopField
-      ;   Break
-      ;   ; MsgBox, 4, , File number %A_Index% is %A_LoopField%.`n`nContinue?
-      ;   ; IfMsgBox, No, Break
-      ; }
 
       ; ; Debug
       ; ToolTip, Active window`nWinHWND: %winHwnd%`nWinName: %processName%`nWinTitle: %winTitle%`nClassName: %winClass%`nControlHWND: %ctrlHwnds%`nControlClassNN: %ctrlClass%`nControlText: %ctrlText%
@@ -86,13 +184,19 @@ class Desktop
       ; Window
       winInfo.hwnd := winHwnd ; "0x20ace"
       winInfo.processName := processName ; "excel.exe"
+      winInfo.pId := Desktop.GetProcessID(processName)
       winInfo.title := winTitle ; "Microsoft Visual Basic for Application..."
       winInfo.winClass := winClass ; "wndclass_desked_gsk"
+      winInfo.winX := winX
+      winInfo.winY := winY
+      winInfo.winWidth := winWidth
+      winInfo.winHeight := winHeight
       ; Control
       winInfo.ctrlClass := ctrlClass ; "VbaWindow1"
       winInfo.ctrlText := ctrlText ; "hoge.xls - MnModule (コード)"
       winInfo.ctrlHwnds := ctrlHwnds ; "0x10bb4"
 
+      CoordMode, Mouse, %savedCoordModeMouse%
       Return winInfo
     }
   } ; }}}
@@ -160,6 +264,7 @@ class Desktop
       ; Window
       curInfo.winHwnd := winHwnd
       curInfo.processName := processName
+      curInfo.pId := Desktop.GetProcessID(processName)
       curInfo.winTitle := winTitle
       curInfo.winClass := winClass
       curInfo.winX := winX
@@ -177,91 +282,209 @@ class Desktop
     }
   } ; }}}
 
+  ; ============== CONTROL CONTROLLER
   /**
-   * @Method GetControlHwnd
-   * @Description Get the control handle from the control name, window title. {{{
-   * @Syntax winHwnd := Desktop.GetControlHwnd(...)
-   * @Param {String} ctrlName
-   * @Param {String} WinTitle
-   * @Param {String} [winText=""]
-   * @Param {String} [excludeTitle=""]
-   * @Return {String}
+   * @Method SendMessageToWindow
+   * @Description Send the specified string to the specified window {{{
+   *   The reply is 1 if the target window processed the message,
+   *   or 0 if it ignored it.
+   * @Link https://www.autohotkey.com/docs/commands/PostMessage.htm
    */
-  class GetControlHwnd extends Desktop.Functor
+  class SendMessageToWindow extends Desktop.Functor
   {
-    Call(self, ctrlName, winTitle, winText="", excludeTitle="")
+    Call(self, wmMsg, wParam, lParam, ctrl, winTitle, winText:="", excludeTitle:="", detect:="")
     {
-      ctrlHwnd := 0x0
-      exitCode := ErrorLevel
+      IfNotEqual, detect, , DetectHiddenWindows, On
 
-      ; Get a list of ahk_id(= window handle ID).
-      WinGet, winIDs, List, %winTitle%, %winText%, %excludeTitle%
-      Loop, %winIDs%
-      {
-        ; Get a ahk_id
-        StringTrimRight, this_id, winIDs%A_Index%, 0
+      Msgbox, %ctrl% %winTitle%
+      ; SendMessage
+      ; SendMessage, Msg [, wParam, lParam, Control, WinTitle, ...., Timeout]
+      ; WM_COPYDATA is WM_COPYDATA. Must use SendMessage. not working(?) PostMessage.
+      SendMessage,% wmMsg,% wParam,% lParam,% ctrl,% winTitle,% winText,% excludeTitle
 
-        ; Get a control IDs
-        WinGet, controls, ControlList, ahk_id %this_id%
-        Loop, Parse, controls, `n
-        {
-          if (InStr(A_LoopField, ctrlName) != 0) {
-            ControlGet, ctrlHwnd, Hwnd,, %A_LoopField%, ahk_id %this_id%
-            exitCode := ErrorLevel
-            Break
-          }
-        }
-        IfEqual, exitCode, %G_ExitCodeOK%, Break
-
-        ; Retry with regular expression matching(Slow)
-        Loop, Parse, controls, `n
-        {
-          if (RegExMatch(A_LoopField, ctrlName) != 0) {
-            ControlGet, ctrlHwnd, Hwnd,, %A_LoopField%, ahk_id %this_id%
-            exitCode := ErrorLevel
-            Break
-          }
-        }
-        IfEqual, exitCode, %G_ExitCodeOK%, Break
-      }
-
-      Return ctrlHwnd
+      DetectHiddenWindows, Off
+      Return
     }
   } ; }}}
 
   /**
-   * @Method FindWindowHwnds
-   * @Description Find window Hwnd which is matched args {{{
-   * @Syntax winHwnds := Desktop.FindWindowHwnds(...)
-   * @Param {String} WinTitle
-   * @Param {String} [winText=""]
-   * @Param {String} [excludeTitle=""]
-   * @Return {Array} [{ hwnd, title }]
+   * @Method SendKeystrokes
+   * @Description Sends simulated keystrokes to a window or control. {{{
+   * @Link https://www.autohotkey.com/docs/commands/ControlSend.htm
+   * @Param {String} keystrokes Ex:"This is my password{Enter}"
+   * @Param {String} ctrl Either ClassNN (the classname and instance number of the control) or the control's text
+   * @Param Others parameters, See @Method GetWindowHwnds
+   * @Return {Number} 0:success
    */
-  class FindWindowHwnds extends Desktop.Functor
+  class SendKeystrokes extends Desktop.Functor
   {
-    Call(self, winTitle, winTxt="", excludeTitle="")
+    Call(self, keystrokes, ctrl, winTitle, winText:="", excludeTitle:="", detectsHid:="OFF")
     {
-      info := []
+      savedDetectHidWin := A_DetectHiddenWindows
 
-      tmpDetectHid := A_DetectHiddenText
-      DetectHiddenWindows, On
-
-      ; Get windows Hwnd IDs.
-      WinGet, winIds, List, %winTitle%, %winText%, %excludeTitle%
-      Loop, %winIds%
-      {
-        ; Get ahk_id
-        StringTrimRight, this_id, winIds%A_Index%, 0
-        ; Get title
-        WinGetTitle, thisTitle, ahk_id %this_id%
-        info.Insert({ hwnd: this_id, title: thisTitle })
-        ; titles .= "ahk_id " . this_id . ": [" . thisTitle . "]`n"; Debug
+      if (detectsHid = "OFF" || detectsHid = "") {
+        DetectHiddenWindows, Off
+      } else {
+        DetectHiddenWindows, On
       }
 
-      ; MsgBox, %titles% ; Debug
-      DetectHiddenWindows, %tmpDetectHid%
-      Return info
+      ControlSend,% ctrl,% keystrokes,% winTitle,% winText,% excludeTitle
+
+      DetectHiddenWindows, %savedDetectHidWin%
+      Return ErrorLevel
+    }
+  } ; }}}
+
+  /**
+   * @Method SetTextToControl
+   * @Description Set the text to a window or control. {{{
+   * @Link https://www.autohotkey.com/docs/commands/ControlSetText.htm
+   * @Param {String} newText Ex:"This is my password"
+   * @Param {String} ctrl Either ClassNN (the classname and instance number of the control) or the control's text
+   * @Param Others parameters, See @Method GetWindowHwnds
+   * @Return {Number} 0:success
+   */
+  class SetTextToControl extends Desktop.Functor
+  {
+    Call(self, newText, ctrl, winTitle, winText:="", excludeTitle:="", detectsHid:="OFF")
+    {
+      savedDetectHidWin := A_DetectHiddenWindows
+
+      if (detectsHid = "OFF" || detectsHid = "") {
+        DetectHiddenWindows, Off
+      } else {
+        DetectHiddenWindows, On
+      }
+
+      ControlSetText,% ctrl,% newText,% winTitle,% winText,% excludeTitle
+
+      DetectHiddenWindows, %savedDetectHidWin%
+      Return ErrorLevel
+    }
+  } ; }}}
+
+  /**
+   * @Method SendStrToWindow
+   * @Description Send the specified string to the specified window {{{
+   * @Link https://www.autohotkey.com/docs/commands/OnMessage.htm
+   * @Param {String} strToSend Ex:"This is my password"
+   * @Param {String} ctrl Either ClassNN (the classname and instance number of the control) or the control's text
+   * @Param Others parameters, See @Method GetWindowHwnds
+   * @Return {} 1: success, FAIL: fail
+   *   The reply is 1 if the target window processed the message,
+   *   or 0 if it ignored it.
+   */
+  class SendStrToWindow extends Desktop.Functor
+  {
+    Call(self, strToSend, ctrl, winTitle, winText:="", excludeTitle:="", detect:="")
+    {
+      ; Set up the structure's memory area.
+      VarSetCapacity(CopyDataStruct, 3*A_PtrSize, 0)
+
+      ; First set the structure's cbData member to the size of the string,
+      ; including its zero terminator:
+      SizeInBytes := (StrLen(strToSend) + 1) * (A_IsUnicode ? 2 : 1)
+
+      ; OS requires that this be done.
+      NumPut(SizeInBytes, CopyDataStruct, A_PtrSize)
+
+      ; Set lpData to point to the string itself.
+      NumPut(&strToSend, CopyDataStruct, 2*A_PtrSize)
+
+      SendMessage,% WM_SETTEXT, 0, &strToSend,% ctrl,% winTitle
+      ; Desktop.SendMessageToWindow(WM_COPYDATA, 0, &CopyDataStruct, ctrl, winTitle, winText, excludeTitle)
+
+      Return ErrorLevel
+    }
+  } ; }}}
+
+  ; ============== WINDOW HANDLER
+  /**
+   * @Method WaitForProcessAppeared {{{
+   */
+  class WaitForProcessAppeared extends Desktop.Functor
+  {
+    Call(self, pname, waitSec=0, showErr=False)
+    {
+      WinWait, ahk_exe %pname%, , %waitSec% ; wait up
+
+      if (ErrorLevel != 0) {
+        if (showErr) {
+          MsgBox,% G_MsgIconStop, WinWait ErrorLevel: %ErrorLevel%
+              , Waited for %waitSec% seconds, but "%pname%" is not found.
+        }
+        Return False
+      }
+
+      Return True
+    }
+  } ; }}}
+
+  /**
+   * @Method WaitForWindowExisting {{{
+   * @Param {Number} [matchMode=1] (1)start, (2)contain, (3)exactly match, (RegEx)
+   * @Param {} False or A Window HWND
+   * @Return {String} Window HWND
+   */
+  class WaitForWindowExisting extends Desktop.Functor
+  {
+    Call(self, winTitle, waitSec:=0, winText:="", excludeTitle:="", matchMode:=1, showErr:=False)
+    {
+      tmpMatchMode := A_TitleMatchMode
+      SetTitleMatchMode, %matchMode%
+      winHwnds := Desktop.GetWindowHwnds(winTitle, winText, excludeTitle)
+      SetTitleMatchMode, %tmpMatchMode%
+
+      winHwnd := ""
+      For key, val in winHwnds
+      {
+        winHwnd := val
+        Break
+      }
+
+      if (winHwnd != "") {
+        Return winHwnd
+      }
+
+      winHwnd := Desktop.WaitForWindowAppeared(winTitle, winSec, winText, excludeTitle, matchMode, showErr)
+      Return winHwnd
+    }
+  } ; }}}
+
+  /**
+   * @Method WaitForWindowAppeared {{{
+   * @Param {Number} [matchMode=1] (1)start, (2)contain, (3)exactly match, (RegEx)
+   * @Param {} False or A Window HWND
+   * @Return {String} Window HWND
+   */
+  class WaitForWindowAppeared extends Desktop.Functor
+  {
+    Call(self, winTitle, waitSec:=0, winText:="", excludeTitle:="", matchMode:=1, showErr:=False)
+    {
+      tmpMatchMode := A_TitleMatchMode
+      SetTitleMatchMode, %matchMode%
+
+      WinWait, %winTitle%, %winText%, %waitSec%, %excludeTitle%
+      if (ErrorLevel != 0) {
+        if (showErr) {
+          MsgBox,% G_MsgIconStop, WinWait ErrorLevel: %ErrorLevel%, Waited for %waitSec% seconds, but "%winTitle%" is not found.
+        }
+        Return
+      }
+
+     /**
+       * @Function WinGet
+       Retrieves the specified window's unique ID, process ID, process name, or
+       a list of its controls. It can also retrieve a list of
+       all windows matching the specified criteria.
+       WinGet, OutputVar , Cmd, WinTitle, WinText, ExcludeTitle, ExcludeText
+      * @Param {Cmd} ID, IDLast, PID, ProcessName, ProcessPath, Count, ...
+      * @Link https://autohotkey.com/docs/commands/WinGet.htm
+      */
+      WinGet, winHwnd, ID, %winTitle%, %winText%, %excludeTitle%
+
+      SetTitleMatchMode, %tmpMatchMode%
+      Return winHwnd
     }
   } ; }}}
 
@@ -404,6 +627,7 @@ class Desktop
     }
   } ; }}}
 
+  ; ============== CURSOR HANDLER
   /**
    * @Method MoveCursorToCaret
    * @Description マウスカーソルをキャレットの位置に移動させる {{{
@@ -448,126 +672,7 @@ class Desktop
     }
   } ; }}}
 
-  /**
-   * @Method SendMessageToWindow
-   * @Description Send the specified string to the specified window {{{
-   *   The reply is 1 if the target window processed the message,
-   *   or 0 if it ignored it.
-   * @Link https://www.autohotkey.com/docs/commands/PostMessage.htm
-   */
-  class SendMessageToWindow extends Desktop.Functor
-  {
-    Call(self, wmMsg, wParam, lParam, ctrl, winTitle, winText:="", excludeTitle:="", detect:="")
-    {
-      IfNotEqual, detect, , DetectHiddenWindows, On
-
-      Msgbox, %ctrl% %winTitle%
-      ; SendMessage
-      ; SendMessage, Msg [, wParam, lParam, Control, WinTitle, ...., Timeout]
-      ; WM_COPYDATA is WM_COPYDATA. Must use SendMessage. not working(?) PostMessage.
-      SendMessage, %wmMsg%, %wParam%, %lParam%, %ctrl%, %winTitle%, %winText%, %excludeTitle%
-
-      DetectHiddenWindows, Off
-      Return
-    }
-  } ; }}}
-
-  /**
-   * @Method SendStrToWindow
-   * @Description Send the specified string to the specified window {{{
-   *   The reply is 1 if the target window processed the message,
-   *   or 0 if it ignored it.
-   * @Link https://www.autohotkey.com/docs/commands/OnMessage.htm
-   */
-  class SendStrToWindow extends Desktop.Functor
-  {
-    Call(self, strToSend, ctrl, winTitle, winText:="", excludeTitle:="", detect:="")
-    {
-      ; Set up the structure's memory area.
-      VarSetCapacity(CopyDataStruct, 3*A_PtrSize, 0)
-
-      ; First set the structure's cbData member to the size of the string,
-      ; including its zero terminator:
-      SizeInBytes := (StrLen(strToSend) + 1) * (A_IsUnicode ? 2 : 1)
-
-      ; OS requires that this be done.
-      NumPut(SizeInBytes, CopyDataStruct, A_PtrSize)
-
-      ; Set lpData to point to the string itself.
-      NumPut(&strToSend, CopyDataStruct, 2*A_PtrSize)
-ControlGetFocus, ctrl, A
-Msgbox, %ctrl%
-; winInfo := Desktop.GetActiveWindowInfo()
-; winTitle := winInfo.title
-; Msgbox, %winTitle%
-
-SendMessage,% WM_SETTEXT, 0, &strToSend,% ctrl,% winTitle
-      ; Desktop.SendMessageToWindow(WM_COPYDATA, 0, &CopyDataStruct, ctrl, winTitle, winText, excludeTitle)
-
-      Return
-    }
-  } ; }}}
-
-  /**
-   * @Method WaitForProcessAppeared {{{
-   */
-  class WaitForProcessAppeared extends Desktop.Functor
-  {
-    Call(self, pname, waitSec=0, showErr=False)
-    {
-      WinWait, ahk_exe %pname%, , %waitSec% ; wait up
-
-      if (ErrorLevel) {
-        if (showErr) {
-          MsgBox,% G_MsgIconStop, WinWait ErrorLevel: %ErrorLevel%
-              , Waited for %waitSec% seconds, but "%pname%" is not found.
-        }
-        Return False
-      }
-
-      Return True
-    }
-  } ; }}}
-
-  /**
-   * @Method WaitForWindowAppeared {{{
-   * @Param {Number} [matchMode=1] (1)start, (2)contain, (3)exactly match, (RegEx)
-   * @Param {} False or A Window HWND
-   * @Return {String} Window HWND
-   */
-  class WaitForWindowAppeared extends Desktop.Functor
-  {
-    Call(self, winTitle, waitSec=0, excludeTitle="", matchMode=1, showErr=False)
-    {
-      tmpMatchMode := A_TitleMatchMode
-      SetTitleMatchMode, %matchMode%
-
-      WinWait, %winTitle%, , %waitSec%, %excludeTitle%
-
-      if (ErrorLevel) {
-        if (showErr) {
-          MsgBox,% G_MsgIconStop, WinWait ErrorLevel: %ErrorLevel%
-              , Waited for %waitSec% seconds, but "%winTitle%" is not found.
-        }
-        Return False
-      }
-
-     /**
-       * @Function WinGet
-       Retrieves the specified window's unique ID, process ID, process name, or
-       a list of its controls. It can also retrieve a list of
-       all windows matching the specified criteria.
-       WinGet, OutputVar , Cmd, WinTitle, WinText, ExcludeTitle, ExcludeText
-      * @Param {Cmd} ID, IDLast, PID, ProcessName, ProcessPath, Count, ...
-      * @Link https://autohotkey.com/docs/commands/WinGet.htm
-      */
-      WinGet, winHwnd, ID, %winTitle%, , %excludeTitle%
-
-      SetTitleMatchMode, %tmpMatchMode%
-      Return winHwnd
-    }
-  } ; }}}
-
+  ; ============== OTHERS
   /**
    * @FIXME Not worked on Windows 10?
    * @Method DisplayTooltip {{{
