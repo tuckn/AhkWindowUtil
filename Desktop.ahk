@@ -1,5 +1,5 @@
 ﻿/**
- * @Updated 2019/06/22
+ * @Updated 2019/07/23
  * @Fileoverview Desktop manager for AutoHotkey
  * @Fileencodeing UTF-8[dos]
  * @Requirements AutoHotkey (v1.0.46+ or v2.0-a+)
@@ -200,7 +200,6 @@ class Desktop
       savedCoordModeMouse := A_CoordModeMouse
       CoordMode, Mouse, Screen
 
-      winInfo := {}
       WinGet, winHwnd, ID, A ; Get a window HWND
       WinGet, processName, ProcessName, ahk_id %winHwnd%
       WinGetTitle, winTitle, ahk_id %winHwnd%
@@ -213,23 +212,24 @@ class Desktop
       ; ; Debug
       ; ToolTip, Active window`nWinHWND: %winHwnd%`nWinName: %processName%`nWinTitle: %winTitle%`nClassName: %winClass%`nControlHWND: %ctrlHwnds%`nControlClassNN: %ctrlClass%`nControlText: %ctrlText%
 
+      info := {}
       ; Window
-      winInfo.winHwnd := winHwnd ; "0x20ace"
-      winInfo.processName := processName ; "excel.exe"
-      winInfo.pId := Desktop.FindProcessName(processName)
-      winInfo.title := winTitle ; "Microsoft Visual Basic for Application..."
-      winInfo.winClass := winClass ; "wndclass_desked_gsk"
-      winInfo.winX := winX
-      winInfo.winY := winY
-      winInfo.winWidth := winWidth
-      winInfo.winHeight := winHeight
+      info.winHwnd := winHwnd ; "0x20ace"
+      info.processName := processName ; "excel.exe"
+      info.pId := Desktop.FindProcessName(processName)
+      info.title := winTitle ; "Microsoft Visual Basic for Application..."
+      info.winClass := winClass ; "wndclass_desked_gsk"
+      info.winX := winX
+      info.winY := winY
+      info.winWidth := winWidth
+      info.winHeight := winHeight
       ; Control
-      winInfo.ctrlClass := ctrlClass ; "VbaWindow1"
-      winInfo.ctrlText := ctrlText ; "hoge.xls - MnModule (コード)"
-      winInfo.ctrlHwnds := ctrlHwnds ; "0x10bb4"
+      info.ctrlClass := ctrlClass ; "VbaWindow1"
+      info.ctrlText := ctrlText ; "hoge.xls - MnModule (コード)"
+      info.ctrlHwnds := ctrlHwnds ; "0x10bb4"
 
       CoordMode, Mouse, %savedCoordModeMouse%
-      Return winInfo
+      Return info
     }
   } ; }}}
 
@@ -286,30 +286,30 @@ class Desktop
       ; ; debug
       ; MsgBox, Cursor window Infomation`nX: %curRelX%`nY: %curRelY%`nWinHWND: %winHwnd%`nWinName: %processName%`nWinTitle: %winTitle%`nClassName: %winClass%`nControlHWND: %ctrlHwnd%`nControlClassNN: %ctrlClass%`nControlText: %ctrlText%
 
+      info := {}
       ; Cursor
-      curInfo := {}
-      curInfo.curAbsX := curAbsX
-      curInfo.curAbsY := curAbsY
-      curInfo.curRelX := curRelX
-      curInfo.curRelY := curRelY
+      info.curAbsX := curAbsX
+      info.curAbsY := curAbsY
+      info.curRelX := curRelX
+      info.curRelY := curRelY
       ; Window
-      curInfo.winHwnd := winHwnd
-      curInfo.processName := processName
-      curInfo.pId := Desktop.FindProcessName(processName)
-      curInfo.winTitle := winTitle
-      curInfo.winClass := winClass
-      curInfo.winX := winX
-      curInfo.winY := winY
-      curInfo.winWidth := winWidth
-      curInfo.winHeight := winHeight
+      info.winHwnd := winHwnd
+      info.processName := processName
+      info.pId := Desktop.FindProcessName(processName)
+      info.winTitle := winTitle
+      info.winClass := winClass
+      info.winX := winX
+      info.winY := winY
+      info.winWidth := winWidth
+      info.winHeight := winHeight
       ; Control
-      curInfo.ctrlClass := ctrlClass
-      curInfo.ctrlText := ctrlText
-      curInfo.ctrlHwnds := ctrlHwnds
-      curInfo.ctrlHwnd := ctrlHwnd
+      info.ctrlClass := ctrlClass
+      info.ctrlText := ctrlText
+      info.ctrlHwnds := ctrlHwnds
+      info.ctrlHwnd := ctrlHwnd
 
       CoordMode, Mouse, %savedCoordModeMouse%
-      Return curInfo
+      Return info
     }
   } ; }}}
 
@@ -556,7 +556,7 @@ class Desktop
       }
 
       if (winHwnd = "") {
-        winHwnd := Desktop.WaitForWindowAppeared(winTitle, winSec
+        winHwnd := Desktop.WaitForWindowAppeared(winTitle, waitSec
             , winText, excludeTitle, hidingDetector, titleMatchMode)
       }
 
@@ -653,7 +653,7 @@ class Desktop
 
       MouseGetPos, startX, startY, winHwnd, winClass,
       WinGetPos, winX, winY, winW, winH, ahk_id %winHwnd%
-      WinActivate, ahk_id %winHwnd%
+      ; WinActivate, ahk_id %winHwnd%
 
       While GetKeyState(downKey, "P") {
         MouseGetPos, nowX, nowY

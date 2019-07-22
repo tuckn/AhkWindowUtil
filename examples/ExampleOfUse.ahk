@@ -1,6 +1,116 @@
 ﻿#Include %A_ScriptDir%\AhkModules\AhkConstValues\Globals.ahk
 #Include %A_ScriptDir%\..\Desktop.ahk
 
+
+  ; KeePassのパスを入力 WILに注意 To use settext, ahk_id control ID
+  errLv := Desktop.SetTextToControl("my_Password5`n", "", "ahk_id 0x361054")
+  ; errLv := Desktop.SetTextToControl("my_Password5`n", "WindowsForms10.EDIT.app.0.30495d1_r6_ad11", "ahk_class WindowsForms10.Window.8.app.0.30495d1_r6_ad1")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+
+  ; KeePassのパスを入力 WILに注意 To use settext
+  errLv := Desktop.SetTextToControl("my_Password1", "WindowsForms10.EDIT.app.0.30495d1_r6_ad11", "ahk_class WindowsForms10.Window.8.app.0.30495d1_r6_ad1")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+
+  ; KeePassのパスを入力 WILに注意 To use sendmessage
+  errLv := Desktop.SendStrToWindow("my_Password2", "WindowsForms10.EDIT.app.0.30495d1_r6_ad11", "ahk_class WindowsForms10.Window.8.app.0.30495d1_r6_ad1")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+
+  ; KeePassのパスを入力 WILに注意 To use keystrokes
+  errLv := Desktop.SendKeystrokes("{End}+{Home}{Del}my_Password3", "WindowsForms10.EDIT.app.0.30495d1_r6_ad11", "ahk_class WindowsForms10.Window.8.app.0.30495d1_r6_ad1")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+
+  ; サクラエディタに入力
+  errLv := Desktop.SendKeystrokes("hoge{Enter}foo bar", "SakuraView1681", "ahk_class TextEditorWindowWP168")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+  ExitApp
+
+RunTest() {
+  ; WindowInfo すべて取得
+  winInfo := Desktop.GetWindowInfo()
+  MsgBox,% GetStringFromObject(winInfo)
+  ExitApp
+
+  ; すべて取得
+  hwnds := Desktop.GetWindowHwnds()
+  rtnStr := ""
+  For key, val in hwnds
+  {
+    WinGetTitle, title,% "ahk_id" val
+    rtnStr .= key ": " val " " title "`n"
+  }
+  MsgBox,% rtnStr
+
+  ; 見た目通りのウィンドウHWNDを取得する
+  hwnds := Desktop.GetWindowHwnds("ahk_exe sakura.exe")
+  rtnStr := ""
+  For key, val in hwnds
+  {
+    WinGetTitle, title,% "ahk_id" val
+    rtnStr .= key ": " val " " title "`n"
+  }
+  MsgBox,% rtnStr
+
+  ; Hidden on 目に見えないGUIのHWNDもひってしまう
+  hwnds := Desktop.GetWindowHwnds("ahk_exe sakura.exe", "", "", "ON")
+  rtnStr := ""
+  For key, val in hwnds
+  {
+    WinGetTitle, title,% "ahk_id" val
+    rtnStr .= key ": " val " " title "`n"
+  }
+  MsgBox,% rtnStr
+
+  ExitApp
+
+  ; KeePassのパスを入力 WILに注意 To use settext, ahk_id control ID
+  errLv := Desktop.SetTextToControl("my_Password5`n", "", "ahk_id 0x351054")
+  ; errLv := Desktop.SetTextToControl("my_Password5`n", "WindowsForms10.EDIT.app.0.30495d1_r6_ad11", "ahk_class WindowsForms10.Window.8.app.0.30495d1_r6_ad1")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+  ExitApp
+
+
+  ; KeePassのパスを入力 WILに注意 To use settext
+  errLv := Desktop.SetTextToControl("my_Password1", "WindowsForms10.EDIT.app.0.30495d1_r6_ad11", "ahk_class WindowsForms10.Window.8.app.0.30495d1_r6_ad1")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+  ExitApp
+
+  ; KeePassのパスを入力 WILに注意 To use sendmessage
+  errLv := Desktop.SendStrToWindow("my_Password2", "WindowsForms10.EDIT.app.0.30495d1_r6_ad11", "ahk_class WindowsForms10.Window.8.app.0.30495d1_r6_ad1")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+  ExitApp
+
+
+  ; KeePassのパスを入力 WILに注意 To use keystrokes
+  errLv := Desktop.SendKeystrokes("{End}+{Home}{Del}my_Password3{Enter}", "WindowsForms10.EDIT.app.0.30495d1_r6_ad11", "ahk_class WindowsForms10.Window.8.app.0.30495d1_r6_ad1")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+  ExitApp
+
+  ; サクラエディタに入力
+  errLv := Desktop.SendKeystrokes("hoge{Enter}foo bar", "SakuraView1681", "ahk_class TextEditorWindowWP168")
+  ; ctrl hwndは固定ではないので使いづらい
+  ; errLv := Desktop.SendKeystrokes("hoge h {Enter}oge", "", "ahk_id 0x250bec")
+  Msgbox,% errLv
+  ExitApp
+}
+
 MsgBox,% G_MsgIconInfo, Hot Keys,% "[Ctrl] + [Shift] + 5: Get the active window info`n"
   . "[Ctrl] + [Shift] + 6: Get the window info under the cursor`n"
   . "[Ctrl] + [Shift] + 7: Double click the coordinates of the caret`n"
@@ -15,7 +125,7 @@ MsgBox,% G_MsgIconInfo, Hot Keys,% "[Ctrl] + [Shift] + 5: Get the active window 
 
 ^+3::
   winTitle := "ahk_exe sakura.exe"
-  winHwnds := Desktop.GetWinHwnds(winTitle)
+  winHwnds := Desktop.GetWindowHwnds(winTitle)
   winHwndsText := GetStringFromObject(winHwnds)
   MsgBox,% G_MsgIconInfo,% "Example Class Desktop",% winTitle ":`n"winHwndsText
 
@@ -38,7 +148,7 @@ MsgBox,% G_MsgIconInfo, Hot Keys,% "[Ctrl] + [Shift] + 5: Get the active window 
   winInfo := Desktop.GetActiveWindowInfo()
   infoText := GetStringFromObject(winInfo)
   MsgBox,% G_MsgIconInfo, Active the window info, %infoText%
-  Return
+  ExitApp
 
 ^+6::
   MsgBox,% G_MsgIconInfo, PREPARE, Hover on your window after clicked [OK]
