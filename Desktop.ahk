@@ -738,8 +738,23 @@ class Desktop
   } ; }}}
 
   /**
+   * @Method RightClickCaretCoord
+   * @Description キャレットの座標で右クリック {{{
+       キャレットが存在しない場合はCursorの位置
+   */
+  class RightClickCaretCoord extends Desktop.Functor
+  {
+    Call(self)
+    {
+      Desktop.MoveCursorToCaret()
+      Send, {RButton}
+      Return
+    }
+  } ; }}}
+
+  /**
    * @Method DoubleClickCaretCoord
-   * @Description キャレットの位置をダブルクリック {{{
+   * @Description キャレットの座標でダブルクリック {{{
        キャレットが存在しない場合はCursorの位置
    */
   class DoubleClickCaretCoord extends Desktop.Functor
