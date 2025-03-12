@@ -1,36 +1,36 @@
 ﻿/**
- * @Updated 2019/07/23
- * @Fileoverview Desktop manager for AutoHotkey
- * @Fileencodeing UTF-8[dos]
- * @Requirements AutoHotkey (v1.0.46+ or v2.0-a+)
- *  https://github.com/tuckn/AhkConstValues
+ * @Fileoverview Window utility functions for AutoHotkey
+ * @Fileencoding UTF-8[dos]
+ * @Requirements AutoHotkey v1.1.x. Not confirmed to work on v2.0 or newer.
  * @Installation
- *   Use #Include %A_ScriptDir%\AhkDesktopManager\Desktop.ahk or copy into your code
+ *   #Include %A_ScriptDir%\AhkWindowUtil\Libs\Global_WindowMessages.ahk
+ *   #Include %A_ScriptDir%\AhkWindowUtil\Libs\Class_WindowUtil.ahk
+ * or copy into your code
  * @License MIT
- * @Links https://github.com/tuckn/AhkDesktopManager
+ * @Links https://github.com/tuckn/AhkWindowUtil
  * @Author Tuckn
- * @Email tuckn333+github@gmail.com
+ * @Email tuckn333@gmail.com
  */
 
 /**
- * @Class Desktop
- * @Discription The Desktop object contains methods for parsing
+ * @Class WindowUtil
+ * @Description The WindowUtil object contains methods for parsing
  * @Note
  *   ahk_class is a name of window template type. not unique.
- *   ahk_id is a HWND. This is short for Hnandle to WiNDow(window handle ID).
+ *   ahk_id is a HWND. This is short for Handle to WiNDow(window handle ID).
  *   ahk_pid is a PID(process ID).
  * @Methods
  */
-class Desktop
+class WindowUtil
 {
   savedDetectHidWin := A_DetectHiddenWindows
   savedTitleMatchMode := A_TitleMatchMode
 
   ; ============== HANDLE GETTER
   /**
-   * @Method GetWindowHwnds
+   * @Method GetWindowHWNDs
    * @Description Get window handles. {{{
-   * @Syntax winHwnd := Desktop.GetWindowHwnds(...)
+   * @Syntax winHwnd := WindowUtil.GetWindowHWNDs(...)
    * @Param {String} [WinTitle=""] Empty is as all windows
    * @Param {String} [winText=""]
    * @Param {String} [excludeTitle=""]
@@ -38,12 +38,12 @@ class Desktop
    * @Param {Number} [titleMatchMode=1] See @Method SetModes
    * @Return {Array}
    */
-  class GetWindowHwnds extends Desktop.Functor
+  class GetWindowHWNDs extends WindowUtil.Functor
   {
     Call(self, winTitle:=""
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       ; Get a list of ahk_id(= window handle ID).
       WinGet, idsList, List,% winTitle,% winText,% excludeTitle
@@ -54,7 +54,7 @@ class Desktop
         winHwnds.Insert(idsList%A_Index%)
       }
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return winHwnds
     }
   } ; }}}
@@ -62,17 +62,17 @@ class Desktop
   /**
    * @Method GetProcessID
    * @Description Get s process ID {{{
-   * @Syntax pId := Desktop.GetProcessID(...)
+   * @Syntax pId := WindowUtil.GetProcessID(...)
    *   When all parameters is empty, get the active window PID.
-   * @Param See @Method GetWindowHwnds
+   * @Param See @Method GetWindowHWNDs
    * @Return {String}
    */
-  class GetProcessID extends Desktop.Functor
+  class GetProcessID extends WindowUtil.Functor
   {
     Call(self, winTitle:=""
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       ; Get the process ID. 複数ある場合は前面にあるものが優先される
       if (winTitle = "" && winText = "" && excludeTitle = "") {
@@ -81,7 +81,7 @@ class Desktop
         WinGet, pId, PID, %winTitle%, %winText%, %excludeTitle%
       }
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return pId
     }
   } ; }}}
@@ -89,11 +89,11 @@ class Desktop
   /**
    * @Method FindProcessName
    * @Description Find the process name {{{
-   * @Syntax pId := Desktop.FindProcessName(ProcessName)
+   * @Syntax pId := WindowUtil.FindProcessName(ProcessName)
    * @Param {String} ProcessName
    * @Return {String} PID. if failed to get, return 0(False)
    */
-  class FindProcessName extends Desktop.Functor
+  class FindProcessName extends WindowUtil.Functor
   {
     Call(self, processName)
     {
@@ -108,17 +108,17 @@ class Desktop
   /**
    * @Method GetControlHwnd
    * @Description Get the control handle from the control name, window title. {{{
-   * @Syntax winHwnd := Desktop.GetControlHwnd(...)
+   * @Syntax winHwnd := WindowUtil.GetControlHwnd(...)
    * @Param {String} ctrlName
-   * @Param Others parameters, See @Method GetWindowHwnds
+   * @Param Others parameters, See @Method GetWindowHWNDs
    * @Return {String}
    */
-  class GetControlHwnd extends Desktop.Functor
+  class GetControlHwnd extends WindowUtil.Functor
   {
     Call(self, ctrlName, winTitle
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       ctrlHwnd := 0x0
       exitCode := ErrorLevel
@@ -140,7 +140,7 @@ class Desktop
             Break
           }
         }
-        IfEqual, exitCode, %G_ExitCodeOK%, Break
+        IfEqual, exitCode, %WN_ExitCodeOK%, Break
 
         ; Retry with regular expression matching(Slow)
         Loop, Parse, controls, `n
@@ -151,10 +151,10 @@ class Desktop
             Break
           }
         }
-        IfEqual, exitCode, %G_ExitCodeOK%, Break
+        IfEqual, exitCode, %WN_ExitCodeOK%, Break
       }
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return ctrlHwnd
     }
   } ; }}}
@@ -162,18 +162,18 @@ class Desktop
   /**
    * @Method GetWindowInfo
    * @Description Find window Hwnd which is matched args {{{
-   * @Syntax winInfo := Desktop.GetWindowInfo(...)
-   * @Param See @Method GetWindowHwnds
+   * @Syntax winInfo := WindowUtil.GetWindowInfo(...)
+   * @Param See @Method GetWindowHWNDs
    * @Return {Array} [{ hwnd, title }]
    */
-  class GetWindowInfo extends Desktop.Functor
+  class GetWindowInfo extends WindowUtil.Functor
   {
     Call(self, winTitle:=""
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
-      winHwnds := Desktop.GetWindowHwnds(winTitle
+      winHwnds := WindowUtil.GetWindowHWNDs(winTitle
           , winText, excludeTitle, hidingDetector, titleMatchMode)
       winInfo := []
 
@@ -183,7 +183,7 @@ class Desktop
         winInfo.Insert({ hwnd: winHwnd, title: winTitle })
       }
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return winInfo
     }
   } ; }}}
@@ -193,7 +193,7 @@ class Desktop
    * @Description Get a active window information {{{
    * @Return {Associative Array} .hwnd, .processName, .title, .winClass, ...
    */
-  class GetActiveWindowInfo extends Desktop.Functor
+  class GetActiveWindowInfo extends WindowUtil.Functor
   {
     Call(self)
     {
@@ -216,7 +216,7 @@ class Desktop
       ; Window
       info.winHwnd := winHwnd ; "0x20ace"
       info.processName := processName ; "excel.exe"
-      info.pId := Desktop.FindProcessName(processName)
+      info.pId := WindowUtil.FindProcessName(processName)
       info.title := winTitle ; "Microsoft Visual Basic for Application..."
       info.winClass := winClass ; "wndclass_desked_gsk"
       info.winX := winX
@@ -247,7 +247,7 @@ class Desktop
    *   .ctrlClass: ex "VbaWindow1"
    *   .ctrlText  ;ex:"hoge.xls - MnModule (コード)"
    */
-  class GetWindowInfoUnderCursor extends Desktop.Functor
+  class GetWindowInfoUnderCursor extends WindowUtil.Functor
   {
     Call(self)
     {
@@ -267,7 +267,7 @@ class Desktop
       SendMessage, %WM_NCHITTEST%, 0, %lParam%, , ahk_id %ctrlHwnd%
 
       ; 応答を待ちエラーならば,Controlの取得方法を変更してControlHWNDを再格納
-      ; If ErrorLevel=%G_SendMessageFAIL%
+      ; If ErrorLevel=%WN_SendMessageFAIL%
       if (ErrorLevel = "FAIL") {
         MouseGetPos, , , , ctrlHwnd, 2 ; Flag=2 -> Get Control HWND
       }
@@ -295,7 +295,7 @@ class Desktop
       ; Window
       info.winHwnd := winHwnd
       info.processName := processName
-      info.pId := Desktop.FindProcessName(processName)
+      info.pId := WindowUtil.FindProcessName(processName)
       info.winTitle := winTitle
       info.winClass := winClass
       info.winX := winX
@@ -321,20 +321,20 @@ class Desktop
    * @Param {String} wmMsg
    * @Param wParam
    * @Param lParam
-   * @Param Others parameters, See @Method GetWindowHwnds
+   * @Param Others parameters, See @Method GetWindowHWNDs
    * @Return https://www.autohotkey.com/docs/commands/PostMessage.htm#ErrorLevel
    */
-  class PostMessageToControl extends Desktop.Functor
+  class PostMessageToControl extends WindowUtil.Functor
   {
     Call(self, wmMsg, wParam, lParam, ctrl, winTitle
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       PostMessage,% wmMsg,% wParam,% lParam,% ctrl,% winTitle
           ,% winText,% excludeTitle
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return ErrorLevel
     }
   } ; }}}
@@ -346,20 +346,20 @@ class Desktop
    * @Param {String} wmMsg
    * @Param wParam
    * @Param lParam
-   * @Param Others parameters, See @Method GetWindowHwnds
+   * @Param Others parameters, See @Method GetWindowHWNDs
    * @Return https://www.autohotkey.com/docs/commands/PostMessage.htm#ErrorLevel
    */
-  class SendMessageToControl extends Desktop.Functor
+  class SendMessageToControl extends WindowUtil.Functor
   {
     Call(self, wmMsg, wParam, lParam, ctrl, winTitle
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       SendMessage,% wmMsg,% wParam,% lParam,% ctrl,% winTitle
           ,% winText,% excludeTitle
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return ErrorLevel
     }
   } ; }}}
@@ -371,10 +371,10 @@ class Desktop
    * @Param {String} wmMsg
    * @Param {String} strToSend Ex:"This is my password"
    * @Param {String} ctrl Either ClassNN (the classname and instance number of the control) or the control's text
-   * Other parameters and return, See @Method GetWindowHwnds
+   * Other parameters and return, See @Method GetWindowHWNDs
    * @Return https://www.autohotkey.com/docs/commands/PostMessage.htm#ErrorLevel
    */
-  class SendMessageAsStr extends Desktop.Functor
+  class SendMessageAsStr extends WindowUtil.Functor
   {
     Call(self, wmMsg, strToSend, ctrl, winTitle
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
@@ -392,7 +392,7 @@ class Desktop
       ; Set lpData to point to the string itself.
       NumPut(&strToSend, CopyDataStruct, 2*A_PtrSize)
 
-      Desktop.SendMessageToControl(wmMsg, 0, &CopyDataStruct, ctrl, winTitle
+      WindowUtil.SendMessageToControl(wmMsg, 0, &CopyDataStruct, ctrl, winTitle
           , winText, excludeTitle, hidingDetector, titleMatchMode)
 
       Return ErrorLevel
@@ -405,19 +405,19 @@ class Desktop
    * @Link https://www.autohotkey.com/docs/commands/ControlSetText.htm
    * @Param {String} newText Ex:"This is my password"
    * @Param {String} ctrl Either ClassNN (the classname and instance number of the control) or the control's text
-   * @Param Others parameters, See @Method GetWindowHwnds
+   * @Param Others parameters, See @Method GetWindowHWNDs
    * @Return {Number} 0:success
    */
-  class SetTextToControl extends Desktop.Functor
+  class SetTextToControl extends WindowUtil.Functor
   {
     Call(self, newText, ctrl, winTitle
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       ControlSetText,% ctrl,% newText,% winTitle,% winText,% excludeTitle
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return ErrorLevel
     }
   } ; }}}
@@ -428,25 +428,25 @@ class Desktop
    * @Link https://www.autohotkey.com/docs/commands/ControlSend.htm
    * @Param {String} keystrokes Ex:"This is my password{Enter}"
    * @Param {String} ctrl Either ClassNN (the classname and instance number of the control) or the control's text
-   * @Param Others parameters, See @Method GetWindowHwnds
+   * @Param Others parameters, See @Method GetWindowHWNDs
    * @Return {Number} 0:success
    */
-  class SendKeystrokes extends Desktop.Functor
+  class SendKeystrokes extends WindowUtil.Functor
   {
     Call(self, keystrokes, ctrl, winTitle
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       ControlSend,% ctrl,% keystrokes,% winTitle,% winText,% excludeTitle
 
       if (ErrorLevel != 0) { ; IF error, retry
-        ctrlHwnd := Desktop.GetControlHwnd(ctrl, winTitle
+        ctrlHwnd := WindowUtil.GetControlHwnd(ctrl, winTitle
             , winText, excludeTitle, hidingDetector, titleMatchMode)
         ControlSend, , %keystrokes%, ahk_id %ctrlHwnd%
       }
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return ErrorLevel
     }
   } ; }}}
@@ -455,15 +455,15 @@ class Desktop
   /**
    * @Method ActivateWindow
    * @Description Activates the specified window {{{
-   * @Param See @Method GetWindowHwnds
+   * @Param See @Method GetWindowHWNDs
    * @Return {}
    */
-  class ActivateWindow extends Desktop.Functor
+  class ActivateWindow extends WindowUtil.Functor
   {
     Call(self, winTitle
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       ; Unhides the specified window.
       ; @Link https://www.autohotkey.com/docs/commands/WinShow.htm
@@ -471,83 +471,83 @@ class Desktop
 
       WinActivate,% winTitle,% winText,% excludeTitle
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return
     }
   } ; }}}
 
   /**
    * @Method WaitForWindowAppeared {{{
-   * @Param See @Method GetWindowHwnds
+   * @Param See @Method GetWindowHWNDs
    * @Return {String} Window HWND
    */
-  class WaitForWindowAppeared extends Desktop.Functor
+  class WaitForWindowAppeared extends WindowUtil.Functor
   {
     Call(self, winTitle, waitSec:=0
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       WinWait, %winTitle%, %winText%, %waitSec%, %excludeTitle%
 
       if (ErrorLevel != 0) {
-        MsgBox,% G_MsgIconStop, WinWait ErrorLevel: %ErrorLevel%
+        MsgBox,% MB_IconStop, WinWait ErrorLevel: %ErrorLevel%
             , Waited for %waitSec% seconds, but "%winTitle%" is not appeared.
         winHwnd := 0
       } else {
-       /**
-         * @Function WinGet
-         Retrieves the specified window's unique ID, process ID, process name, or
-         a list of its controls. It can also retrieve a list of
-         all windows matching the specified criteria.
-         WinGet, OutputVar , Cmd, WinTitle, WinText, ExcludeTitle, ExcludeText
+      /**
+        * @Function WinGet
+        Retrieves the specified window's unique ID, process ID, process name, or
+        a list of its controls. It can also retrieve a list of
+        all windows matching the specified criteria.
+        WinGet, OutputVar , Cmd, WinTitle, WinText, ExcludeTitle, ExcludeText
         * @Param {Cmd} ID, IDLast, PID, ProcessName, ProcessPath, Count, ...
         * @Link https://autohotkey.com/docs/commands/WinGet.htm
         */
         WinGet, winHwnd, ID, %winTitle%, %winText%, %excludeTitle%
       }
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return winHwnd
     }
   } ; }}}
 
   /**
    * @Method WaitForWindowActivated {{{
-   * @Param See @Method GetWindowHwnds
+   * @Param See @Method GetWindowHWNDs
    * @Return {String} Window HWND
    */
-  class WaitForWindowActivated extends Desktop.Functor
+  class WaitForWindowActivated extends WindowUtil.Functor
   {
     Call(self, winTitle, waitSec:=0
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       WinWaitActive, %winTitle%, %winText%, %waitSec%, %excludeTitle%
       if (ErrorLevel != 0) {
-        MsgBox,% G_MsgIconStop, WinWait ErrorLevel: %ErrorLevel%
+        MsgBox,% MB_IconStop, WinWait ErrorLevel: %ErrorLevel%
             , Waited for %waitSec% seconds, but "%winTitle%" is not activated.
       }
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return
     }
   } ; }}}
 
   /**
-   * @Method WaitForWindowExisting {{{
-   * @Param See @Method GetWindowHwnds
+   * @Method WaitForWindowExist {{{
+   * @Param See @Method GetWindowHWNDs
    * @Return {String} Window HWND
    */
-  class WaitForWindowExisting extends Desktop.Functor
+  class WaitForWindowExist extends WindowUtil.Functor
   {
     Call(self, winTitle, waitSec:=0
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
-      winHwnds := Desktop.GetWindowHwnds(winTitle, winText, excludeTitle)
+      winHwnds := WindowUtil.GetWindowHWNDs(winTitle, winText, excludeTitle)
       winHwnd := ""
       For key, val in winHwnds
       {
@@ -556,23 +556,23 @@ class Desktop
       }
 
       if (winHwnd = "") {
-        winHwnd := Desktop.WaitForWindowAppeared(winTitle, waitSec
+        winHwnd := WindowUtil.WaitForWindowAppeared(winTitle, waitSec
             , winText, excludeTitle, hidingDetector, titleMatchMode)
       }
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return winHwnd
     }
   } ; }}}
 
   /**
    * @FIXME Not working on Windows 10
-   * @Method ActivateProcessFormTasktray
+   * @Method ActivateProcessFromTasktray
    * @Description タスクトレイも含めたプロセスをアクティブにする {{{
    * @Link http://d.hatena.ne.jp/centigrade/20080303/p1
    * @Return Window Hwnd ID
    */
-  class ActivateProcessFormTasktray extends Desktop.Functor
+  class ActivateProcessFromTasktray extends WindowUtil.Functor
   {
     Call(self, processName)
     {
@@ -617,16 +617,16 @@ class Desktop
   /**
    * @Method MinimizeWindow
    * @Description Collapse the specified window into the task bar. {{{
-   * @Syntax Desktop.MinimizeWindow(...)
-   * @Param See @Method GetWindowHwnds
+   * @Syntax WindowUtil.MinimizeWindow(...)
+   * @Param See @Method GetWindowHWNDs
    * @Return
    */
-  class MinimizeWindow extends Desktop.Functor
+  class MinimizeWindow extends WindowUtil.Functor
   {
     Call(self, winTitle
         , winText:="", excludeTitle:="", hidingDetector:="OFF", titleMatchMode:=1)
     {
-      Desktop.SetModes(hidingDetector, titleMatchMode)
+      WindowUtil.SetModes(hidingDetector, titleMatchMode)
 
       WinMinimize, %winTitle%, %winText%, %excludeTitle%
 
@@ -634,7 +634,7 @@ class Desktop
       ; try using the following instead: 0x112=WM_SYSCOMMAND 0xF020=SC_MINIMIZE
       PostMessage, 0x112, 0xF020, , , %winTitle%, %winText%
 
-      Desktop.RestoreModes()
+      WindowUtil.RestoreModes()
       Return
     }
   } ; }}}
@@ -644,7 +644,7 @@ class Desktop
    * @Description 引数のキーを押している間、ウィンドウ位置がマウスに追従 {{{
    * @Param downKey [Win] is not work.
    */
-  class MoveWindowUnderCursor extends Desktop.Functor
+  class MoveWindowUnderCursor extends WindowUtil.Functor
   {
     Call(self, downKey)
     {
@@ -674,7 +674,7 @@ class Desktop
    * @Description ウィンドウサイズ変更 {{{
    * @Param downKey [Win] is not work.
    */
-  class ResizeWindowUnderCursor extends Desktop.Functor
+  class ResizeWindowUnderCursor extends WindowUtil.Functor
   {
     Call(self, downKey)
     {
@@ -712,7 +712,7 @@ class Desktop
    * @Method MoveCursorToCaret
    * @Description マウスカーソルをキャレットの位置に移動させる {{{
    */
-  class MoveCursorToCaret extends Desktop.Functor
+  class MoveCursorToCaret extends WindowUtil.Functor
   {
     Call(self)
     {
@@ -740,13 +740,13 @@ class Desktop
   /**
    * @Method RightClickCaretCoord
    * @Description キャレットの座標で右クリック {{{
-       キャレットが存在しない場合はCursorの位置
+      キャレットが存在しない場合はCursorの位置
    */
-  class RightClickCaretCoord extends Desktop.Functor
+  class RightClickCaretCoord extends WindowUtil.Functor
   {
     Call(self)
     {
-      Desktop.MoveCursorToCaret()
+      WindowUtil.MoveCursorToCaret()
       Send, {RButton}
       Return
     }
@@ -755,13 +755,13 @@ class Desktop
   /**
    * @Method DoubleClickCaretCoord
    * @Description キャレットの座標でダブルクリック {{{
-       キャレットが存在しない場合はCursorの位置
+      キャレットが存在しない場合はCursorの位置
    */
-  class DoubleClickCaretCoord extends Desktop.Functor
+  class DoubleClickCaretCoord extends WindowUtil.Functor
   {
     Call(self)
     {
-      Desktop.MoveCursorToCaret()
+      WindowUtil.MoveCursorToCaret()
       Send, {LButton 2}
       Return
     }
@@ -770,9 +770,9 @@ class Desktop
   ; ============== OTHERS
   /**
    * @FIXME Not worked on Windows 10?
-   * @Method DisplayTooltip {{{
+   * @Method ShowTooltip {{{
    */
-  class DisplayTooltip extends Desktop.Functor
+  class ShowTooltip extends WindowUtil.Functor
   {
     Call(self, txt, msec)
     {
@@ -789,9 +789,9 @@ class Desktop
   } ; }}}
 
   /**
-   * @Method DisplayTrayTip {{{
+   * @Method ShowTrayTip {{{
    */
-  class DisplayTrayTip extends Desktop.Functor
+  class ShowTrayTip extends WindowUtil.Functor
   {
     Call(self, txt, msec)
     {
